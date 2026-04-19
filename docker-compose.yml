@@ -1,0 +1,40 @@
+# ==================================================
+# DOCKER COMPOSE — Orchestration des services
+# ==================================================
+version: '3.8'
+
+services:
+
+  # ── Base de données PostgreSQL ──────────────────
+  db:
+    image: postgres:16-alpine        # Version légère de PostgreSQL
+    container_name: time-manager-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: time_manager_dev  # Nom de la base de données
+      POSTGRES_USER: tm_user         # Nom d'utilisateur
+      POSTGRES_PASSWORD: tm_password # Mot de passe (dev uniquement !)
+    ports:
+      - "5432:5432"   # Expose PostgreSQL sur ton ordi (port standard)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persiste les données
+      - ./backend/src/migrations:/docker-entrypoint-initdb.d  # Auto-init
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tm_user -d time_manager_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Interface graphique pour la DB ─────────────
+  adminer:
+    image: adminer                   # Interface web pour voir la DB
+    container_name: time-manager-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # Accessible sur http://localhost:8080
+    depends_on:
+      - db
+
+# ── Volumes (stockage persistant) ──────────────────
+volumes:
+  postgres_data:

@@ -1,133 +1,157 @@
 // ==================================================
-// CLOCK CONTROLLER — Logique pour les pointages
+// CLOCK CONTROLLER — Version PostgreSQL
 // ==================================================
-const store = require('../data/store');
+const db = require('../config/database');
 
-// POST /clocks → Enregistrer une arrivée ou un départ
-const recordClock = (req, res) => {
+// POST /clocks → Enregistrer arrivée ou départ
+const recordClock = async (req, res) => {
   try {
     const { userId } = req.body;
 
     if (!userId) {
       return res.status(400).json({
         success: false,
-        message: 'Le champ userId est obligatoire'
+        message: 'userId est obligatoire'
       });
     }
 
     // Vérifier que l'utilisateur existe
-    const user = store.users.find(u => u.id === parseInt(userId));
-    if (!user) {
+    const userResult = await db.query(
+      'SELECT id, first_name FROM users WHERE id = $1 AND is_active = true',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: `Utilisateur ${userId} introuvable`
       });
     }
 
+    const user = userResult.rows[0];
+
     // Trouver le dernier pointage de cet utilisateur
-    const userClocks = store.clocks
-      .filter(c => c.userId === parseInt(userId))
-      .sort((a, b) => new Date(b.clockedAt) - new Date(a.clockedAt));
+    const lastClockResult = await db.query(
+      `SELECT type FROM clocks
+       WHERE user_id = $1
+       ORDER BY clocked_at DESC
+       LIMIT 1`,
+      [userId]
+    );
 
-    const lastClock = userClocks[0];
+    const lastClock = lastClockResult.rows[0];
 
-    // Logique toggle :
-    // Si le dernier pointage = clock_in → on fait un clock_out
-    // Si le dernier pointage = clock_out (ou aucun) → on fait un clock_in
+    // Logique toggle
     const clockType = (!lastClock || lastClock.type === 'clock_out')
       ? 'clock_in'
       : 'clock_out';
 
-    const newClock = {
-      id: store.getNextClockId(),
-      userId: parseInt(userId),
-      type: clockType,
-      clockedAt: new Date()
-    };
-
-    store.clocks.push(newClock);
+    // Insérer le nouveau pointage
+    const result = await db.query(
+      `INSERT INTO clocks (user_id, type)
+       VALUES ($1, $2)
+       RETURNING id, user_id, type, clocked_at`,
+      [userId, clockType]
+    );
 
     const message = clockType === 'clock_in'
-      ? `✅ Arrivée enregistrée pour ${user.firstName}`
-      : `👋 Départ enregistré pour ${user.firstName}`;
+      ? `✅ Arrivée enregistrée pour ${user.first_name}`
+      : `👋 Départ enregistré pour ${user.first_name}`;
 
     res.status(201).json({
       success: true,
       message,
-      data: newClock
+      data: result.rows[0]
     });
   } catch (error) {
+    console.error('Erreur recordClock:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// GET /users/:id/clocks → Historique des pointages d'un utilisateur
-const getUserClocks = (req, res) => {
+// GET /users/:id/clocks → Historique des pointages
+const getUserClocks = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id);
+    const { id } = req.params;
 
-    const user = store.users.find(u => u.id === userId);
-    if (!user) {
+    // Vérifier que l'utilisateur existe
+    const userResult = await db.query(
+      'SELECT first_name, last_name FROM users WHERE id = $1',
+      [id]
+    );
+
+    if (userResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `Utilisateur ${userId} introuvable`
+        message: `Utilisateur ${id} introuvable`
       });
     }
 
-    // Filtrer les pointages de cet utilisateur, triés par date
-    const userClocks = store.clocks
-      .filter(c => c.userId === userId)
-      .sort((a, b) => new Date(b.clockedAt) - new Date(a.clockedAt));
+    const user = userResult.rows[0];
+
+    // Récupérer tous ses pointages
+    const clocksResult = await db.query(
+      `SELECT id, type, clocked_at
+       FROM clocks
+       WHERE user_id = $1
+       ORDER BY clocked_at DESC`,
+      [id]
+    );
 
     res.status(200).json({
       success: true,
-      user: `${user.firstName} ${user.lastName}`,
-      count: userClocks.length,
-      data: userClocks
+      user: `${user.first_name} ${user.last_name}`,
+      count: clocksResult.rows.length,
+      data: clocksResult.rows
     });
   } catch (error) {
+    console.error('Erreur getUserClocks:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// GET /reports → Rapport global
-const getReports = (req, res) => {
+// GET /clocks/reports → Rapport global
+const getReports = async (req, res) => {
   try {
-    // Pour chaque utilisateur, calculer ses heures travaillées
-    const report = store.users.map(user => {
-      const userClocks = store.clocks
-        .filter(c => c.userId === user.id)
-        .sort((a, b) => new Date(a.clockedAt) - new Date(b.clockedAt));
+    // Requête SQL qui calcule les heures travaillées
+    // en associant les clock_in avec les clock_out
+const result = await db.query(`
+  WITH clock_pairs AS (
+    SELECT
+      c.user_id,
+      c.clocked_at AS start_time,
+      LEAD(c.clocked_at) OVER (
+        PARTITION BY c.user_id
+        ORDER BY c.clocked_at
+      ) AS end_time,
+      c.type
+    FROM clocks c
+  )
+  SELECT
+    u.id,
+    u.first_name || ' ' || u.last_name AS nom,
+    u.role,
+    COUNT(c.id) AS total_pointages,
+    COALESCE(SUM(
+      CASE
+        WHEN cp.type = 'clock_in' AND cp.end_time IS NOT NULL
+        THEN EXTRACT(EPOCH FROM (cp.end_time - cp.start_time)) / 60
+        ELSE 0
+      END
+    ), 0)::INT AS total_minutes
+  FROM users u
+  LEFT JOIN clocks c ON u.id = c.user_id
+  LEFT JOIN clock_pairs cp ON u.id = cp.user_id
+  WHERE u.is_active = true
+  GROUP BY u.id, u.first_name, u.last_name, u.role
+  ORDER BY u.last_name
+`);
 
-      // Calculer les sessions de travail (paires clock_in / clock_out)
-      let totalMinutes = 0;
-      let sessions = [];
-
-      for (let i = 0; i < userClocks.length - 1; i++) {
-        if (userClocks[i].type === 'clock_in' &&
-            userClocks[i + 1].type === 'clock_out') {
-          const debut = new Date(userClocks[i].clockedAt);
-          const fin = new Date(userClocks[i + 1].clockedAt);
-          const dureeMinutes = Math.round((fin - debut) / 1000 / 60);
-
-          totalMinutes += dureeMinutes;
-          sessions.push({
-            debut: debut.toISOString(),
-            fin: fin.toISOString(),
-            duree: `${Math.floor(dureeMinutes / 60)}h${dureeMinutes % 60}min`
-          });
-        }
-      }
-
-      return {
-        userId: user.id,
-        nom: `${user.firstName} ${user.lastName}`,
-        role: user.role,
-        totalHeures: `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60}min`,
-        nombreSessions: sessions.length,
-        sessions
-      };
-    });
+    // Formater les minutes en "Xh Ymin"
+    const report = result.rows.map(row => ({
+      ...row,
+      total_heures: `${Math.floor(row.total_minutes / 60)}h${row.total_minutes % 60}min`
+    }));
 
     res.status(200).json({
       success: true,
@@ -135,6 +159,7 @@ const getReports = (req, res) => {
       data: report
     });
   } catch (error) {
+    console.error('Erreur getReports:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

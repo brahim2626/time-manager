@@ -1,24 +1,29 @@
 // ==================================================
-// USER CONTROLLER — Logique pour les utilisateurs
+// USER CONTROLLER — Version PostgreSQL
 // ==================================================
-const store = require('../data/store');
+const db = require('../config/database');
 
-// ─────────────────────────────────────────
-// GET /users → Récupérer tous les utilisateurs
-// ─────────────────────────────────────────
-const getAllUsers = (req, res) => {
+// ─────────────────────────────────────────────────
+// GET /users → Tous les utilisateurs
+// ─────────────────────────────────────────────────
+const getAllUsers = async (req, res) => {
   try {
-    // On récupère tous les utilisateurs du store
-    const users = store.users;
+    // $1, $2... = paramètres sécurisés (évite les injections SQL)
+    const result = await db.query(
+      `SELECT id, first_name, last_name, email, phone, role,
+              is_active, created_at
+       FROM users
+       WHERE is_active = true
+       ORDER BY created_at DESC`
+    );
 
-    // On répond avec la liste + le nombre total
     res.status(200).json({
       success: true,
-      count: users.length,
-      data: users
+      count: result.rows.length,
+      data: result.rows
     });
   } catch (error) {
-    // Si quelque chose se passe mal, on répond avec une erreur
+    console.error('Erreur getAllUsers:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -27,166 +32,156 @@ const getAllUsers = (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────
-// GET /users/:id → Récupérer UN utilisateur par son ID
-// ─────────────────────────────────────────
-const getUserById = (req, res) => {
+// ─────────────────────────────────────────────────
+// GET /users/:id → Un utilisateur par ID
+// ─────────────────────────────────────────────────
+const getUserById = async (req, res) => {
   try {
-    // req.params.id = l'ID dans l'URL (ex: /users/2 → id = "2")
-    // On convertit en nombre avec parseInt
-    const id = parseInt(req.params.id);
+    const { id } = req.params;
 
-    // On cherche l'utilisateur dans le tableau
-    const user = store.users.find(u => u.id === id);
+    const result = await db.query(
+      `SELECT id, first_name, last_name, email, phone, role,
+              is_active, created_at
+       FROM users
+       WHERE id = $1 AND is_active = true`,
+      [id]  // $1 sera remplacé par la valeur de id
+    );
 
-    // Si l'utilisateur n'existe pas → erreur 404
-    if (!user) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `Utilisateur avec l'ID ${id} introuvable`
+        message: `Utilisateur ${id} introuvable`
       });
     }
 
-    // Si trouvé → on le renvoie
     res.status(200).json({
       success: true,
-      data: user
+      data: result.rows[0]
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur',
-      error: error.message
-    });
+    console.error('Erreur getUserById:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// ─────────────────────────────────────────
-// POST /users → Créer un nouvel utilisateur
-// ─────────────────────────────────────────
-const createUser = (req, res) => {
+// ─────────────────────────────────────────────────
+// POST /users → Créer un utilisateur
+// ─────────────────────────────────────────────────
+const createUser = async (req, res) => {
   try {
-    // req.body = les données envoyées dans la requête
-    const { firstName, lastName, email, role } = req.body;
+    const { firstName, lastName, email, phone, role } = req.body;
 
-    // Validation : est-ce que tous les champs sont présents ?
+    // Validation
     if (!firstName || !lastName || !email) {
       return res.status(400).json({
         success: false,
-        message: 'Les champs firstName, lastName et email sont obligatoires'
+        message: 'firstName, lastName et email sont obligatoires'
       });
     }
 
-    // Vérifier si l'email est déjà utilisé
-    const emailExists = store.users.find(u => u.email === email);
-    if (emailExists) {
+    // INSERT et RETURNING = retourne la ligne insérée
+    const result = await db.query(
+      `INSERT INTO users (first_name, last_name, email, phone, role)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, first_name, last_name, email, phone, role, created_at`,
+      [firstName, lastName, email, phone || null, role || 'employee']
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Utilisateur créé avec succès',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    // Code 23505 = violation de contrainte UNIQUE (email déjà pris)
+    if (error.code === '23505') {
       return res.status(400).json({
         success: false,
         message: 'Cet email est déjà utilisé'
       });
     }
-
-    // Créer le nouvel utilisateur
-    const newUser = {
-      id: store.getNextUserId(),
-      firstName,
-      lastName,
-      email,
-      role: role || 'employee', // Par défaut : employé
-      createdAt: new Date()
-    };
-
-    // L'ajouter au tableau
-    store.users.push(newUser);
-
-    // Répondre avec le nouvel utilisateur (status 201 = Créé)
-    res.status(201).json({
-      success: true,
-      message: 'Utilisateur créé avec succès',
-      data: newUser
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur',
-      error: error.message
-    });
+    console.error('Erreur createUser:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// ─────────────────────────────────────────
+// ─────────────────────────────────────────────────
 // PUT /users/:id → Modifier un utilisateur
-// ─────────────────────────────────────────
-const updateUser = (req, res) => {
+// ─────────────────────────────────────────────────
+const updateUser = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const { id } = req.params;
+    const { firstName, lastName, email, phone, role } = req.body;
 
-    // Trouver l'index de l'utilisateur dans le tableau
-    const index = store.users.findIndex(u => u.id === id);
+    const result = await db.query(
+      `UPDATE users
+       SET first_name  = COALESCE($1, first_name),
+           last_name   = COALESCE($2, last_name),
+           email       = COALESCE($3, email),
+           phone       = COALESCE($4, phone),
+           role        = COALESCE($5, role),
+           updated_at  = NOW()
+       WHERE id = $6 AND is_active = true
+       RETURNING id, first_name, last_name, email, phone, role, updated_at`,
+      [firstName, lastName, email, phone, role, id]
+    );
 
-    if (index === -1) {
+    // COALESCE($1, first_name) = si $1 est null, garde l'ancienne valeur
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `Utilisateur avec l'ID ${id} introuvable`
+        message: `Utilisateur ${id} introuvable`
       });
     }
-
-    // Fusionner les anciennes données avec les nouvelles
-    // (on garde ce qui n'est pas modifié)
-    store.users[index] = {
-      ...store.users[index],   // anciennes données
-      ...req.body,             // nouvelles données
-      id,                      // on garde l'ID original
-      updatedAt: new Date()    // on ajoute la date de modification
-    };
 
     res.status(200).json({
       success: true,
-      message: 'Utilisateur mis à jour avec succès',
-      data: store.users[index]
+      message: 'Utilisateur mis à jour',
+      data: result.rows[0]
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur',
-      error: error.message
-    });
+    console.error('Erreur updateUser:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// ─────────────────────────────────────────
-// DELETE /users/:id → Supprimer un utilisateur
-// ─────────────────────────────────────────
-const deleteUser = (req, res) => {
+// ─────────────────────────────────────────────────
+// DELETE /users/:id → Supprimer (soft delete)
+// ─────────────────────────────────────────────────
+const deleteUser = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const index = store.users.findIndex(u => u.id === id);
+    const { id } = req.params;
 
-    if (index === -1) {
+    // Soft delete = on ne supprime pas vraiment,
+    // on marque juste is_active = false
+    // (conformité RGPD : on garde la trace)
+    const result = await db.query(
+      `UPDATE users
+       SET is_active = false, updated_at = NOW()
+       WHERE id = $1 AND is_active = true
+       RETURNING id, first_name, last_name, email`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `Utilisateur avec l'ID ${id} introuvable`
+        message: `Utilisateur ${id} introuvable`
       });
     }
-
-    // Supprimer l'utilisateur du tableau
-    const deletedUser = store.users.splice(index, 1)[0];
 
     res.status(200).json({
       success: true,
       message: 'Utilisateur supprimé avec succès',
-      data: deletedUser
+      data: result.rows[0]
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur',
-      error: error.message
-    });
+    console.error('Erreur deleteUser:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
 
-// On exporte toutes les fonctions
 module.exports = {
   getAllUsers,
   getUserById,
