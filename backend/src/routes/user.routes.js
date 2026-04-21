@@ -1,23 +1,19 @@
-// ==================================================
-// USER ROUTES — Adresses pour les utilisateurs
-// ==================================================
 const express = require('express');
 const router = express.Router();
-
-// On importe le controller
 const {
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser
+  getAllUsers, getUserById, createUser, updateUser, deleteUser
 } = require('../controllers/user.controller');
+const { protect } = require('../middleware/auth.middleware');
+const { isAdmin, isManager } = require('../middleware/role.middleware');
 
-// On branche chaque adresse sur sa fonction
-router.get('/', getAllUsers);           // GET    /users
-router.get('/:id', getUserById);       // GET    /users/1
-router.post('/', createUser);          // POST   /users
-router.put('/:id', updateUser);        // PUT    /users/1
-router.delete('/:id', deleteUser);     // DELETE /users/1
+// protect = doit être connecté
+// isAdmin = doit être admin
+// isManager = doit être manager ou admin
+
+router.get('/',      protect, isManager, getAllUsers);    // Managers et admins seulement
+router.get('/:id',   protect, getUserById);              // Tout utilisateur connecté
+router.post('/',     protect, isAdmin,   createUser);    // Admins seulement
+router.put('/:id',   protect,            updateUser);    // Tout utilisateur connecté
+router.delete('/:id',protect, isAdmin,   deleteUser);    // Admins seulement
 
 module.exports = router;

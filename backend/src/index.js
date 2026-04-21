@@ -1,5 +1,5 @@
 // ==================================================
-// INDEX.JS — Point d'entrée du serveur
+// INDEX.JS — Point d'entrée (version finale étape 5-6)
 // ==================================================
 const express = require('express');
 const cors = require('cors');
@@ -7,38 +7,39 @@ require('dotenv').config();
 
 const app = express();
 
-// ── Middlewares ────────────────────────────────────
+// ── Middlewares globaux ────────────────────────────
 app.use(cors());
 app.use(express.json());
 
-// Middleware de logging : affiche chaque requête reçue
+// Logger de requêtes
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.url} — ${new Date().toLocaleTimeString()}`);
-  next(); // Passe à la suite
+  next();
 });
 
 // ── Import des routes ──────────────────────────────
-const userRoutes = require('./routes/user.routes');
-const teamRoutes = require('./routes/team.routes');
+const authRoutes  = require('./routes/auth.routes');
+const userRoutes  = require('./routes/user.routes');
+const teamRoutes  = require('./routes/team.routes');
 const clockRoutes = require('./routes/clock.routes');
 
 // ── Branchement des routes ─────────────────────────
-// Toutes les routes "users" commencent par /api/v1/users
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/teams', teamRoutes);
-app.use('/api/v1/clocks', clockRoutes);
+app.use('/api/v1/auth',  authRoutes);   // 🔓 Publique + protégée
+app.use('/api/v1/users', userRoutes);   // 🔒 Protégée
+app.use('/api/v1/teams', teamRoutes);   // 🔒 Protégée
+app.use('/api/v1/clocks', clockRoutes); // 🔒 Protégée
 
-// Route spéciale pour les clocks d'un utilisateur
-// (GET /api/v1/users/:id/clocks)
+// Route pour les clocks d'un utilisateur
+const { protect } = require('./middleware/auth.middleware');
 const { getUserClocks } = require('./controllers/clock.controller');
-app.get('/api/v1/users/:id/clocks', getUserClocks);
+app.get('/api/v1/users/:id/clocks', protect, getUserClocks);
 
 // ── Routes de base ─────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
-    message: '✅ API Time Manager opérationnelle !',
-    version: '1.0.0',
+    message: '✅ API Time Manager v2.0 — Authentification activée !',
     endpoints: {
+      auth:    { login: 'POST /api/v1/auth/login', register: 'POST /api/v1/auth/register' },
       users:   '/api/v1/users',
       teams:   '/api/v1/teams',
       clocks:  '/api/v1/clocks',
@@ -48,10 +49,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ status: 'OK', auth: 'JWT', timestamp: new Date().toISOString() });
 });
 
-// ── Gestion des routes inexistantes ───────────────
+// ── Route 404 ──────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -63,12 +64,6 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+  console.log(`🔐 Authentification JWT activée`);
   console.log(`📡 Environnement : ${process.env.NODE_ENV}`);
-  console.log('─────────────────────────────────────');
-  console.log('📋 Routes disponibles :');
-  console.log(`   GET    http://localhost:${PORT}/api/v1/users`);
-  console.log(`   POST   http://localhost:${PORT}/api/v1/users`);
-  console.log(`   GET    http://localhost:${PORT}/api/v1/teams`);
-  console.log(`   POST   http://localhost:${PORT}/api/v1/clocks`);
-  console.log(`   GET    http://localhost:${PORT}/api/v1/clocks/reports`);
 });
