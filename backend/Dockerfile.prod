@@ -1,0 +1,43 @@
+# ================================================
+# DOCKERFILE BACKEND — Production (Multi-stage)
+# ================================================
+
+# ── STAGE 1 : Construction ───────────────────────
+# On appelle ce stage "builder"
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# En production : on installe UNIQUEMENT les dépendances
+# nécessaires (pas les devDependencies comme nodemon)
+RUN npm ci --only=production
+
+COPY . .
+
+# ── STAGE 2 : Image finale ───────────────────────
+# On repart d'une image propre et légère
+FROM node:20-alpine
+
+# Créer un utilisateur non-root pour la sécurité
+# (ne jamais tourner en root en production !)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+# Copier UNIQUEMENT les fichiers nécessaires depuis le builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/src          ./src
+COPY --from=builder /app/package.json ./
+
+# Changer le propriétaire des fichiers
+RUN chown -R appuser:appgroup /app
+
+# Utiliser l'utilisateur non-root
+USER appuser
+
+EXPOSE 4000
+
+# En production : pas de nodemon, juste node
+CMD ["node", "src/index.js"]

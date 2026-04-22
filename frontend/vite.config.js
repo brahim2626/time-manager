@@ -5,11 +5,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    // Proxy : redirige /api vers le backend
-    // Comme ça, pas de problème CORS en développement
+    host: '0.0.0.0',      // ← important pour Docker
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        target: 'http://backend:4000',  // ← nom du service Docker
         changeOrigin: true
       }
     }

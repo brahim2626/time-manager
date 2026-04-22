@@ -1,40 +1,117 @@
-# ==================================================
-# DOCKER COMPOSE — Orchestration des services
-# ==================================================
-version: '3.8'
+# ================================================
+# DOCKER-COMPOSE.YML — Environnement développement
+# ================================================
+name: time-manager-dev
 
 services:
 
-  # ── Base de données PostgreSQL ──────────────────
+  # ────────────────────────────────────────────────
+  # BASE DE DONNÉES PostgreSQL
+  # ────────────────────────────────────────────────
   db:
-    image: postgres:16-alpine        # Version légère de PostgreSQL
+    image: postgres:16-alpine
     container_name: time-manager-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: time_manager_dev  # Nom de la base de données
-      POSTGRES_USER: tm_user         # Nom d'utilisateur
-      POSTGRES_PASSWORD: tm_password # Mot de passe (dev uniquement !)
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"   # Expose PostgreSQL sur ton ordi (port standard)
+      - "5432:5432"         # Exposé pour Adminer et connexions directes
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # Persiste les données
-      - ./backend/src/migrations:/docker-entrypoint-initdb.d  # Auto-init
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/migrations:/docker-entrypoint-initdb.d:ro
+        # :ro = read-only (lecture seule, sécurité)
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tm_user -d time_manager_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s   # Attend 10s avant de commencer les checks
+    networks:
+      - internal          # Réseau privé (non accessible depuis l'extérieur)
 
-  # ── Interface graphique pour la DB ─────────────
+  # ────────────────────────────────────────────────
+  # BACKEND Node.js
+  # ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile    # Utilise le Dockerfile de dev
+    container_name: time-manager-backend
+    restart: unless-stopped
+    env_file: .env              # Charge les variables depuis .env
+    environment:
+      DB_HOST: db               # Écrase DB_HOST avec le nom du service Docker
+    volumes:
+      # Monte le code source en direct → hot-reload avec nodemon !
+      - ./backend/src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy  # Attend que la DB soit prête
+    networks:
+      - internal
+      - proxy
+    # Pas de "ports" exposé directement → passe par Nginx
+
+  # ────────────────────────────────────────────────
+  # FRONTEND React
+  # ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile    # Utilise le Dockerfile de dev
+    container_name: time-manager-frontend
+    restart: unless-stopped
+    volumes:
+      # Monte le code source → hot-reload de Vite !
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    depends_on:
+      - backend
+    networks:
+      - proxy
+
+  # ────────────────────────────────────────────────
+  # NGINX — Reverse proxy
+  # ────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: time-manager-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"               # ← LE SEUL PORT EXPOSÉ À L'EXTÉRIEUR
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - proxy
+
+  # ────────────────────────────────────────────────
+  # ADMINER — Interface graphique pour la DB
+  # ────────────────────────────────────────────────
   adminer:
-    image: adminer                   # Interface web pour voir la DB
+    image: adminer:latest
     container_name: time-manager-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"   # Accessible sur http://localhost:8080
+      - "8080:8080"
     depends_on:
       - db
+    networks:
+      - internal
+      - proxy
 
-# ── Volumes (stockage persistant) ──────────────────
+# ── Volumes persistants ──────────────────────────
 volumes:
   postgres_data:
+    name: time-manager-postgres-data
+
+# ── Réseaux ──────────────────────────────────────
+networks:
+  internal:       # DB + Backend seulement (isolé)
+    name: time-manager-internal
+  proxy:          # Nginx + Backend + Frontend
+    name: time-manager-proxy

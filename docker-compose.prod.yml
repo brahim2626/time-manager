@@ -1,0 +1,90 @@
+# ================================================
+# DOCKER-COMPOSE.PROD.YML — Production
+# Usage : docker-compose -f docker-compose.prod.yml up -d
+# ================================================
+name: time-manager-prod
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: time-manager-db-prod
+    restart: always             # always = redémarre même après reboot
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./backend/src/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+    # En production : PAS de ports exposés !
+    # La DB n'est accessible que depuis le backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod   # Image optimisée pour la prod
+    container_name: time-manager-backend-prod
+    restart: always
+    env_file: .env
+    environment:
+      DB_HOST:    db
+      NODE_ENV:   production
+    depends_on:
+      db:
+        condition: service_healthy
+    # Pas de volumes bind mount en prod (code figé dans l'image)
+    networks:
+      - internal
+      - proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'       # Maximum 50% d'un CPU
+          memory: 256M      # Maximum 256MB de RAM
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod   # Build statique servi par Nginx
+    container_name: time-manager-frontend-prod
+    restart: always
+    networks:
+      - proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: time-manager-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/locations.conf:/etc/nginx/conf.d/locations.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - proxy
+
+volumes:
+  postgres_prod_data:
+    name: time-manager-postgres-prod
+
+networks:
+  internal:
+    name: time-manager-internal-prod
+  proxy:
+    name: time-manager-proxy-prod
