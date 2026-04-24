@@ -2,6 +2,10 @@
 // AUTH CONTROLLER — Login, Register, Profil
 // ==================================================
 const bcrypt = require('bcryptjs');
+(async () => {
+  const hash = await bcrypt.hash("password123", 10);
+  console.log("NEW HASH:", hash);
+})();
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 
@@ -95,7 +99,8 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
+      console.log("EMAIL:", email);
+      console.log("PASSWORD:", password);
     // ── Validation ──────────────────────────────
     if (!email || !password) {
       return res.status(400).json({
@@ -133,7 +138,8 @@ const login = async (req, res) => {
     // ── Vérifier le mot de passe ─────────────────
     // bcrypt.compare("password123", "$2a$10$...") → true ou false
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
+    console.log("HASH DB:", user.password_hash);
+    console.log("COMPARE RESULT:", isPasswordValid);
     if (!isPasswordValid) {
       return res.status(401).json(invalidCredentials);
     }
