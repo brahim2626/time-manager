@@ -1,0 +1,78 @@
+# ================================================
+# SECURITY.YML — Scan de sécurité automatique
+# ================================================
+
+name: 🔒 Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Scan automatique tous les lundis à 9h00
+    - cron: '0 9 * * 1'
+
+jobs:
+
+  # ════════════════════════════════════════════════
+  # Scan des dépendances npm (vulnérabilités connues)
+  # ════════════════════════════════════════════════
+  npm-audit:
+    name: 🔍 npm audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Installer dépendances backend
+        working-directory: ./backend
+        run: npm ci
+
+      - name: 🔍 Audit de sécurité backend
+        working-directory: ./backend
+        # --audit-level=high = échoue seulement pour les failles HIGH/CRITICAL
+        run: npm audit --audit-level=high
+        continue-on-error: true    # Ne bloque pas si des failles sont trouvées
+                                   # (affiche juste un avertissement)
+
+      - name: 📦 Installer dépendances frontend
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: 🔍 Audit de sécurité frontend
+        working-directory: ./frontend
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  # ════════════════════════════════════════════════
+  # Scan de l'image Docker avec Trivy
+  # (cherche des failles dans l'image)
+  # ════════════════════════════════════════════════
+  trivy-scan:
+    name: 🛡️ Trivy Docker Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🏗️ Build image Docker
+        run: |
+          docker build \
+            -f backend/Dockerfile.prod \
+            -t time-manager:scan \
+            ./backend
+
+      - name: 🛡️ Scanner avec Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'time-manager:scan'
+          format: 'table'           # Affichage en tableau
+          severity: 'HIGH,CRITICAL' # Signaler seulement HIGH et CRITICAL
+          exit-code: '0'            # Ne pas faire échouer le pipeline
+                                    # (mettre '1' pour bloquer si failles trouvées)
+
+      - name: 📋 Résumé sécurité
+        run: echo "🔒 Scan de sécurité terminé. Vérifier les résultats ci-dessus."

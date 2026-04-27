@@ -1,0 +1,238 @@
+# ================================================
+# CI.YML — Pipeline d'Intégration Continue
+# Se déclenche à chaque push ou Pull Request
+# ================================================
+
+name: 🚀 CI Pipeline — Time Manager
+
+# ── Déclencheurs ────────────────────────────────
+on:
+  push:
+    branches: [ main, develop ]   # Sur ces branches
+  pull_request:
+    branches: [ main, develop ]   # Ou quand on fait une PR vers ces branches
+
+# ── Variables globales ───────────────────────────
+env:
+  NODE_VERSION: '20'
+
+# ── Les jobs (tâches) ────────────────────────────
+jobs:
+
+  # ════════════════════════════════════════════════
+  # JOB 1 : BUILD — Vérifier que ça compile
+  # ════════════════════════════════════════════════
+  build:
+    name: 🔨 Build
+    runs-on: ubuntu-latest    # Machine virtuelle Linux
+
+    steps:
+      # 1. Télécharger le code
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      # 2. Installer Node.js
+      - name: ⚙️ Installer Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'                          # Cache npm pour aller plus vite
+          cache-dependency-path: backend/package-lock.json
+
+      # 3. Installer les dépendances backend
+      - name: 📦 Installer dépendances backend
+        working-directory: ./backend            # Se placer dans le bon dossier
+        run: npm ci                             # "ci" = install propre et reproductible
+
+      # 4. Installer les dépendances frontend
+      - name: 📦 Installer dépendances frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 npm install frontend
+        working-directory: ./frontend
+        run: npm ci
+
+      # 5. Build du frontend (React → fichiers statiques)
+      - name: 🏗️ Build frontend React
+        working-directory: ./frontend
+        run: npm run build
+
+      # 6. Vérifier que les fichiers sont bien générés
+      - name: ✅ Vérifier le build
+        run: |
+          echo "📁 Contenu du dossier dist :"
+          ls -la frontend/dist/
+          echo "✅ Build réussi !"
+
+  # ════════════════════════════════════════════════
+  # JOB 2 : TEST — Lancer les tests automatisés
+  # ════════════════════════════════════════════════
+  test:
+    name: 🧪 Tests
+    runs-on: ubuntu-latest
+    needs: build    # Ne lance que si le build réussit
+
+    # ── Service PostgreSQL pour les tests ─────────
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       time_manager_test
+          POSTGRES_USER:     tm_user
+          POSTGRES_PASSWORD: tm_password_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: 📦 Installer dépendances backend
+        working-directory: ./backend
+        run: npm ci
+
+      # Créer le fichier .env.test pour les tests
+      - name: 📝 Créer le fichier .env.test
+        working-directory: ./backend
+        run: |
+          cat > .env.test << EOF
+          NODE_ENV=test
+          PORT=4001
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=time_manager_test
+          DB_USER=tm_user
+          DB_PASSWORD=tm_password_test
+          JWT_SECRET=ci_test_secret_key_github_actions
+          JWT_EXPIRES_IN=1h
+          BCRYPT_ROUNDS=1
+          EOF
+
+      # Lancer les tests
+      - name: 🧪 Lancer les tests
+        working-directory: ./backend
+        run: npm test
+
+      # Afficher un résumé dans les logs
+      - name: 📋 Résumé des tests
+        if: always()    # Toujours afficher, même si les tests échouent
+        run: echo "✅ Tests terminés"
+
+  # ════════════════════════════════════════════════
+  # JOB 3 : COVERAGE — Rapport de couverture
+  # ════════════════════════════════════════════════
+  coverage:
+    name: 📊 Couverture de code
+    runs-on: ubuntu-latest
+    needs: test    # Ne lance que si les tests passent
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       time_manager_test
+          POSTGRES_USER:     tm_user
+          POSTGRES_PASSWORD: tm_password_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: 📦 Installer dépendances
+        working-directory: ./backend
+        run: npm ci
+
+      - name: 📝 Créer .env.test
+        working-directory: ./backend
+        run: |
+          cat > .env.test << EOF
+          NODE_ENV=test
+          PORT=4001
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=time_manager_test
+          DB_USER=tm_user
+          DB_PASSWORD=tm_password_test
+          JWT_SECRET=ci_test_secret_key_github_actions
+          JWT_EXPIRES_IN=1h
+          BCRYPT_ROUNDS=1
+          EOF
+
+      # Générer le rapport de couverture
+      - name: 📊 Générer le rapport de couverture
+        working-directory: ./backend
+        run: npm run test:coverage
+
+      # Sauvegarder le rapport comme "artefact" GitHub
+      # (téléchargeable depuis l'interface GitHub)
+      - name: 💾 Sauvegarder le rapport
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage/
+          retention-days: 30    # Garder 30 jours
+
+      # Afficher le résumé de couverture dans les logs
+      - name: 📋 Afficher la couverture
+        working-directory: ./backend
+        run: |
+          echo "## 📊 Rapport de couverture" >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.json 2>/dev/null || echo "Rapport non disponible"
+
+  # ════════════════════════════════════════════════
+  # JOB 4 : DOCKER — Vérifier que Docker build
+  # ════════════════════════════════════════════════
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: 📥 Checkout du code
+        uses: actions/checkout@v4
+
+      # Construire l'image Docker du backend
+      - name: 🏗️ Build image backend
+        run: |
+          docker build \
+            -f backend/Dockerfile.prod \
+            -t time-manager-backend:test \
+            ./backend
+          echo "✅ Image backend construite avec succès"
+
+      # Vérifier que l'image est bien là
+      - name: 🔍 Inspecter l'image
+        run: |
+          docker images time-manager-backend:test
+          docker inspect time-manager-backend:test | grep -E '"Size"|"Created"'
