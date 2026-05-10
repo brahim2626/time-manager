@@ -11,7 +11,6 @@ const { pool } = require('../src/config/database');
 // Créer les tables dans la base de test
 beforeAll(async () => {
   await pool.query(`
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
     CREATE TABLE IF NOT EXISTS users (
       id            SERIAL PRIMARY KEY,

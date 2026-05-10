@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">42.1% </span>
+                <span class="strong">44.73% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>16/38</span>
+                <span class='fraction'>17/38</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">8.33% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/12</span>
+                <span class='fraction'>3/12</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">43.24% </span>
+                <span class="strong">45.94% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>16/37</span>
+                <span class='fraction'>17/37</span>
             </div>
         
             
@@ -236,11 +236,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -302,17 +302,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -343,13 +343,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -379,12 +376,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -401,12 +401,12 @@
 const db = require('../config/database');
 &nbsp;
 // POST /clocks → Enregistrer arrivée ou départ
-const recordClock = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
-<span class="cstat-no" title="statement not covered" >  try {</span>
-    const { userId } = <span class="cstat-no" title="statement not covered" >req.body;</span>
+const recordClock = async (req, res) =&gt; {
+  try {
+    const { userId } = req.body;
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (!userId) {</span>
-<span class="cstat-no" title="statement not covered" >      return res.status(400).json({</span>
+    <span class="missing-if-branch" title="else path not taken" >E</span>if (!userId) {
+      return res.status(400).json({
         success: false,
         message: 'userId est obligatoire'
       });
@@ -477,8 +477,8 @@ const getUserClocks = async (req, res) =&gt; {
       [id]
     );
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (userResult.rows.length === 0) {
-<span class="cstat-no" title="statement not covered" >      return res.status(404).json({</span>
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
         success: false,
         message: `Utilisateur ${id} introuvable`
       });
@@ -508,11 +508,11 @@ const getUserClocks = async (req, res) =&gt; {
 };
 &nbsp;
 // GET /clocks/reports → Rapport global
-const getReports = async (req, res) =&gt; {
-  try {
+const getReports = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
+<span class="cstat-no" title="statement not covered" >  try {</span>
     // Requête SQL qui calcule les heures travaillées
     // en associant les clock_in avec les clock_out
-const result = await db.query(`
+const result = <span class="cstat-no" title="statement not covered" >await db.query(`</span>
   WITH clock_pairs AS (
     SELECT
       c.user_id,
@@ -545,12 +545,12 @@ const result = await db.query(`
 `);
 &nbsp;
     // Formater les minutes en "Xh Ymin"
-    const report = result.rows.map(<span class="fstat-no" title="function not covered" >ro</span>w =&gt; (<span class="cstat-no" title="statement not covered" >{</span>
+    const report = <span class="cstat-no" title="statement not covered" >result.rows.map(<span class="fstat-no" title="function not covered" >ro</span>w =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
       ...row,
       total_heures: `${Math.floor(row.total_minutes / 60)}h${row.total_minutes % 60}min`
     }));
 &nbsp;
-    res.status(200).json({
+<span class="cstat-no" title="statement not covered" >    res.status(200).json({</span>
       success: true,
       generatedAt: new Date().toISOString(),
       data: report
@@ -568,7 +568,7 @@ module.exports = { recordClock, getUserClocks, getReports };</pre></td></tr></ta
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-26T00:27:32.612Z
+                at 2026-05-10T14:31:05.620Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
