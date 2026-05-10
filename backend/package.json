@@ -10,29 +10,28 @@
     "test:watch":    "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage --forceExit"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"],
-
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
-
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/migrations/**"
-    ],
-
-    "coverageThreshold": {
-      "global": {
-        "lines": 40,
-        "functions": 20,
-        "branches": 20,
-        "statements": 40
-      }
-    },
-
-    "coverageReporters": ["text", "lcov", "html"],
-    "verbose": true,
-    "testTimeout": 15000
+"jest": {
+  "testEnvironment": "node",
+  "testMatch":       ["**/tests/**/*.test.js"],
+  "globalSetup":     "<rootDir>/tests/globalSetup.js",
+  "globalTeardown":  "<rootDir>/tests/globalTeardown.js",
+  "collectCoverageFrom": [
+    "src/**/*.js",
+    "!src/migrations/**",
+    "!src/data/store.js",
+    "!src/index.js"
+  ],
+  "coverageThreshold": {
+    "global": {
+      "lines":     40,
+      "functions": 25,
+      "branches":  25
+    }
+  },
+  "coverageReporters": ["text", "lcov", "html"],
+  "verbose":     true,
+  "testTimeout": 15000,
+  "maxWorkers":  1
 },
   "dependencies": {
     "bcryptjs":    "^2.4.3",

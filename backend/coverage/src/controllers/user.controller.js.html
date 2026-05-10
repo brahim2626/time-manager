@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">29.78% </span>
+                <span class="strong">46.8% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>14/47</span>
+                <span class='fraction'>22/47</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">11.76% </span>
+                <span class="strong">17.64% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>2/17</span>
+                <span class='fraction'>3/17</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">20% </span>
+                <span class="strong">60% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/5</span>
+                <span class='fraction'>3/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">29.78% </span>
+                <span class="strong">46.8% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/47</span>
+                <span class='fraction'>22/47</span>
             </div>
         
             
@@ -262,17 +262,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -405,28 +405,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -451,10 +451,10 @@ const db = require('../config/database');
 // ─────────────────────────────────────────────────
 // GET /users → Tous les utilisateurs
 // ─────────────────────────────────────────────────
-const getAllUsers = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
-<span class="cstat-no" title="statement not covered" >  try {</span>
+const getAllUsers = async (req, res) =&gt; {
+  try {
     // $1, $2... = paramètres sécurisés (évite les injections SQL)
-    const result = <span class="cstat-no" title="statement not covered" >await db.query(</span>
+    const result = await db.query(
       `SELECT id, first_name, last_name, email, phone, role,
               is_active, created_at
        FROM users
@@ -462,7 +462,7 @@ const getAllUsers = <span class="fstat-no" title="function not covered" >as</spa
        ORDER BY created_at DESC`
     );
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    res.status(200).json({</span>
+    res.status(200).json({
       success: true,
       count: result.rows.length,
       data: result.rows
@@ -594,14 +594,14 @@ const updateUser = async (req, res) =&gt; {
 // ─────────────────────────────────────────────────
 // DELETE /users/:id → Supprimer (soft delete)
 // ─────────────────────────────────────────────────
-const deleteUser = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
-<span class="cstat-no" title="statement not covered" >  try {</span>
-    const { id } = <span class="cstat-no" title="statement not covered" >req.params;</span>
+const deleteUser = async (req, res) =&gt; {
+  try {
+    const { id } = req.params;
 &nbsp;
     // Soft delete = on ne supprime pas vraiment,
     // on marque juste is_active = false
     // (conformité RGPD : on garde la trace)
-    const result = <span class="cstat-no" title="statement not covered" >await db.query(</span>
+    const result = await db.query(
       `UPDATE users
        SET is_active = false, updated_at = NOW()
        WHERE id = $1 AND is_active = true
@@ -609,14 +609,14 @@ const deleteUser = <span class="fstat-no" title="function not covered" >as</span
       [id]
     );
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (result.rows.length === 0) {</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (result.rows.length === 0) {
 <span class="cstat-no" title="statement not covered" >      return res.status(404).json({</span>
         success: false,
         message: `Utilisateur ${id} introuvable`
       });
     }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    res.status(200).json({</span>
+    res.status(200).json({
       success: true,
       message: 'Utilisateur supprimé avec succès',
       data: result.rows[0]
@@ -640,7 +640,7 @@ module.exports = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-10T14:31:05.697Z
+                at 2026-05-10T18:56:19.469Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

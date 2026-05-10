@@ -23,6 +23,7 @@ const protect = (req, res, next) => {
     // ── Vérifier et décoder le token ────────────
     // jwt.verify lance une erreur si le token est invalide ou expiré
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded);
 
     // ── Attacher les infos de l'utilisateur ─────
     // Disponible dans tous les controllers via req.user
